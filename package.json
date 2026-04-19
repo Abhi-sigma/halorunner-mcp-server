@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "generate:tools": "tsx scripts/generate-tools-from-swagger.ts",
     "e2e": "tsx scripts/e2e-api-test.ts",
-    "simulate": "tsx scripts/simulate.ts"
+    "simulate": "tsx scripts/simulate.ts",
+    "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
