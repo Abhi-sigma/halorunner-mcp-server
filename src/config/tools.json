@@ -1,0 +1,1273 @@
+{
+  "$schema": "./tools.schema.json",
+  "version": "1.0",
+  "strict_returns": true,
+  "redactionValue": "REDACTED",
+  "categories": {
+    "gp": {
+      "label": "GP workflows",
+      "summary": "Patient lookup + clinical primitives"
+    },
+    "appointments": {
+      "label": "Appointments",
+      "summary": "Schedule and roster primitives"
+    },
+    "billing": {
+      "label": "Billing",
+      "summary": "Invoice + patient debt primitives"
+    },
+    "admin": {
+      "label": "Administration",
+      "summary": "Practice dashboards"
+    }
+  },
+  "tools": [
+    {
+      "tool_name": "get_dashboard_stats",
+      "path": "/api/Dashboard/stats",
+      "method": "GET",
+      "category": "admin",
+      "write": false,
+      "description": "Dashboard metrics for the practice: total queries, success rate, average response time, active users, last query timestamp. Takes `days` (default 30) for the lookback window. No PII. Useful for 'how is the system performing' or 'what's our query throughput'.",
+      "source": {},
+      "parameters": {
+        "days": {
+          "type": "integer",
+          "format": "int32",
+          "required": false,
+          "in": "query"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.totalQueriesExecuted": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.successfulQueries": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.failedQueries": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.successRate": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.averageResponseTimeMs": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.totalReports": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.activeUsers": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.lastQueryExecuted": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.queryTypeBreakdown.queryType": {
+          "type": "string",
+          "pii": false
+        },
+        "data.queryTypeBreakdown.count": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.queryTypeBreakdown.percentage": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.environmentBreakdown.environment": {
+          "type": "string",
+          "pii": false
+        },
+        "data.environmentBreakdown.count": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.environmentBreakdown.percentage": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "get_appointment_book",
+      "path": "/api/Manpower/appointment-book/data",
+      "method": "POST",
+      "category": "appointments",
+      "write": true,
+      "description": "Fetch the appointment book (the schedule grid of all appointments across practitioners) for a given date and location. Returns rows with patient name/DOB/address/phones/reason (all REDACTED before you see them) plus the doctor name, slot time, and status. Use for questions like 'how busy is the Crace clinic today' or 'which appointments are running late' — but remember you cannot see patient identities; refer to them by internalId if you need to discuss a specific row.",
+      "source": {},
+      "parameters": {
+        "siteId": {
+          "type": "string",
+          "required": false,
+          "in": "body"
+        },
+        "subscriptionKey": {
+          "type": "string",
+          "required": false,
+          "in": "body"
+        },
+        "useProduction": {
+          "type": "boolean",
+          "required": false,
+          "in": "body"
+        },
+        "startDate": {
+          "type": "string",
+          "required": false,
+          "in": "body"
+        },
+        "endDate": {
+          "type": "string",
+          "required": false,
+          "in": "body"
+        },
+        "locationName": {
+          "type": "string",
+          "required": false,
+          "in": "body"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.appointmentDate": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.appointmentTime": {
+          "type": "string",
+          "pii": false
+        },
+        "data.appointmentLengthMins": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.location": {
+          "type": "string",
+          "pii": false
+        },
+        "data.doctor": {
+          "type": "string",
+          "pii": false
+        },
+        "data.patientId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.patientName": {
+          "type": "string",
+          "pii": true
+        },
+        "data.dateOfBirth": {
+          "type": "string",
+          "pii": true,
+          "format": "date-time"
+        },
+        "data.address": {
+          "type": "string",
+          "pii": true
+        },
+        "data.workPhone": {
+          "type": "string",
+          "pii": true
+        },
+        "data.homePhone": {
+          "type": "string",
+          "pii": true
+        },
+        "data.mobile": {
+          "type": "string",
+          "pii": true
+        },
+        "data.appointmentType": {
+          "type": "string",
+          "pii": false
+        },
+        "data.reason": {
+          "type": "string",
+          "pii": true
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "list_practitioners_today",
+      "path": "/api/Roster/today/{location}",
+      "method": "GET",
+      "category": "appointments",
+      "write": false,
+      "description": "List the practitioners rostered at a specific location today, with their department, shift times, and scheduled hours. Doctor/staff names ARE surfaced (not redacted — policy). Use this to answer 'who is working today' or 'which GPs are on at Lyneham this afternoon'.",
+      "source": {},
+      "parameters": {
+        "location": {
+          "type": "string",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.scheduleId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.userId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.userName": {
+          "type": "string",
+          "pii": false
+        },
+        "data.departmentId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.departmentName": {
+          "type": "string",
+          "pii": false
+        },
+        "data.location": {
+          "type": "string",
+          "pii": false
+        },
+        "data.startTime": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.finishTime": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.startTimeFormatted": {
+          "type": "string",
+          "pii": false
+        },
+        "data.finishTimeFormatted": {
+          "type": "string",
+          "pii": false
+        },
+        "data.hoursScheduled": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.acceptanceStatus": {
+          "type": "string",
+          "pii": false
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "get_debt_aging_summary",
+      "path": "/api/debt-collections/aging-summary",
+      "method": "GET",
+      "category": "billing",
+      "write": false,
+      "description": "Practice-wide aging summary: total debt, number of debtor patients, and number of unpaid invoices, broken down into buckets (0-30 days, 31-60, 61-90, 91-120, 121-180, 180+). No per-patient data — aggregate only. Optional `fromDate` and `minAmount` filters. Use for overview questions like 'what is our total outstanding AR' or 'how much is in the 180+ bucket.'",
+      "source": {},
+      "parameters": {
+        "fromDate": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "minAmount": {
+          "type": "number",
+          "format": "double",
+          "required": false,
+          "in": "query"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.bucket0To30.label": {
+          "type": "string",
+          "pii": false
+        },
+        "data.bucket0To30.patientCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket0To30.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket0To30.totalAmount": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.bucket31To60.label": {
+          "type": "string",
+          "pii": false
+        },
+        "data.bucket31To60.patientCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket31To60.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket31To60.totalAmount": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.bucket61To90.label": {
+          "type": "string",
+          "pii": false
+        },
+        "data.bucket61To90.patientCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket61To90.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket61To90.totalAmount": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.bucket91To120.label": {
+          "type": "string",
+          "pii": false
+        },
+        "data.bucket91To120.patientCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket91To120.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket91To120.totalAmount": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.bucket121To180.label": {
+          "type": "string",
+          "pii": false
+        },
+        "data.bucket121To180.patientCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket121To180.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket121To180.totalAmount": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.bucket180Plus.label": {
+          "type": "string",
+          "pii": false
+        },
+        "data.bucket180Plus.patientCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket180Plus.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.bucket180Plus.totalAmount": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.totalDebt": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.totalPatients": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.totalInvoices": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "get_invoice_by_id",
+      "path": "/api/Financial/payments/invoices/{invoiceId}",
+      "method": "GET",
+      "category": "billing",
+      "write": false,
+      "description": "Fetch one invoice in full detail by its invoice ID. Returns line items, totals, payment status, provider, and the patient info. patientName is REDACTED; invoice details (amounts, line items, status, provider) come through cleanly. Use after list_recent_invoices or get_patient_invoices.",
+      "source": {},
+      "parameters": {
+        "invoiceId": {
+          "type": "integer",
+          "format": "int32",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.invoiceId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.invoiceDate": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.patientId": {
+          "type": "string",
+          "pii": false
+        },
+        "data.patientName": {
+          "type": "string",
+          "pii": true
+        },
+        "data.providerName": {
+          "type": "string",
+          "pii": false
+        },
+        "data.total": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.status": {
+          "type": "string",
+          "pii": false
+        },
+        "data.postedToBp": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.tyroTransactionRef": {
+          "type": "string",
+          "pii": false
+        },
+        "data.mid": {
+          "type": "string",
+          "pii": false
+        },
+        "data.tid": {
+          "type": "string",
+          "pii": false
+        },
+        "data.paymentMethod": {
+          "type": "string",
+          "pii": false
+        },
+        "data.services.serviceId": {
+          "type": "string",
+          "pii": false
+        },
+        "data.services.itemCode": {
+          "type": "string",
+          "pii": false
+        },
+        "data.services.description": {
+          "type": "string",
+          "pii": false
+        },
+        "data.services.fee": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "get_patient_invoices",
+      "path": "/api/debt-collections/patients/{patientId}/invoices",
+      "method": "GET",
+      "category": "billing",
+      "write": false,
+      "description": "All invoices for one patient, organised into aging buckets (0-30 days, 30-60, etc.). Shows patient-level totalDebt, then per-bucket invoice count/total, then individual invoices with date, amount, age in days, provider name, and payer label (bulk-bill, private, DVA etc). patientName is REDACTED; the rest is non-PII. Requires the patient's internalId.",
+      "source": {},
+      "parameters": {
+        "patientId": {
+          "type": "string",
+          "required": true,
+          "in": "path"
+        },
+        "fromDate": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "minAmount": {
+          "type": "number",
+          "format": "double",
+          "required": false,
+          "in": "query"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.patientId": {
+          "type": "string",
+          "pii": false
+        },
+        "data.patientName": {
+          "type": "string",
+          "pii": true
+        },
+        "data.totalDebt": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.buckets.label": {
+          "type": "string",
+          "pii": false
+        },
+        "data.buckets.bucketTotal": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.buckets.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.buckets.invoices.invoiceId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.buckets.invoices.invoiceDate": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.buckets.invoices.total": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.buckets.invoices.ageDays": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.buckets.invoices.providerName": {
+          "type": "string",
+          "pii": false
+        },
+        "data.buckets.invoices.payerCode": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.buckets.invoices.payerLabel": {
+          "type": "string",
+          "pii": false
+        },
+        "data.buckets.invoices.categoryName": {
+          "type": "string",
+          "pii": false
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "list_patients_with_debt",
+      "path": "/api/debt-collections/patients",
+      "method": "GET",
+      "category": "billing",
+      "write": false,
+      "description": "List patients with outstanding debt, paginated. Default 50 per page; use `page` and `pageSize` to page through. Filter by aging `bucket` (e.g. 0-30, 31-60, 61-90, 91-120, 121-180, 180+), `minAmount`, `assignedTo` (staff), `fromDate`, or `search` (matches patient name substring — the name itself still comes back REDACTED, but the filter works server-side). Each row gives the patientId, redacted patientName, totalDebt, invoiceCount, age of oldest invoice, which aging bucket it falls in, and current collection/case status. Use the patientId with get_patient_invoices, get_patient_appointments, or get_patient_by_id for follow-up. The top-level `totalCount` tells you how many debtors exist overall; if it exceeds `pageSize`, tell the user and ask if they want the next page or a narrower filter.",
+      "source": {},
+      "parameters": {
+        "bucket": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "search": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "required": false,
+          "in": "query"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "required": false,
+          "in": "query"
+        },
+        "sortBy": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "assignedTo": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "fromDate": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "minAmount": {
+          "type": "number",
+          "format": "double",
+          "required": false,
+          "in": "query"
+        },
+        "reminderFilter": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.page": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.pageSize": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.totalCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.patientId": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.patientName": {
+          "type": "string",
+          "pii": true
+        },
+        "data.items.totalDebt": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.items.invoiceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.oldestAgeDays": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.oldestBucket": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.caseId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.pipelineStatus": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.adminDecision": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.assignedTo": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.contactCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "list_recent_invoices",
+      "path": "/api/Financial/payments/invoices/recent",
+      "method": "GET",
+      "category": "billing",
+      "write": false,
+      "description": "Recent invoices across the whole practice, most recent first. Returns up to `limit` rows (default 50). patientName REDACTED per row; invoice id, amount, date, status, provider visible. For practice-wide reporting questions ('what invoices were raised today', 'which providers have unpaid invoices this week').",
+      "source": {},
+      "parameters": {
+        "limit": {
+          "type": "integer",
+          "format": "int32",
+          "required": false,
+          "in": "query"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.invoiceId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.invoiceDate": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.patientId": {
+          "type": "string",
+          "pii": false
+        },
+        "data.patientName": {
+          "type": "string",
+          "pii": true
+        },
+        "data.providerName": {
+          "type": "string",
+          "pii": false
+        },
+        "data.total": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.status": {
+          "type": "string",
+          "pii": false
+        },
+        "data.postedToBp": {
+          "type": "boolean",
+          "pii": false
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "get_patient_appointments",
+      "path": "/api/thread-management/patient-file/{patientId}/appointments",
+      "method": "GET",
+      "category": "gp",
+      "write": false,
+      "description": "Fetch a patient's appointment history, split into `upcoming` and `past` lists. For each appointment: date/time, duration, appointment type, status, and the doctor's name (doctor names are NOT redacted — they're safe to surface). Requires the patient's internalId (from search_patients or get_patient_by_id). Use this to answer questions like 'when did Jane last see Dr Smith' or 'what upcoming appointments does she have'.",
+      "source": {},
+      "parameters": {
+        "patientId": {
+          "type": "integer",
+          "format": "int32",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "upcoming.id": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "upcoming.doctorUserId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "upcoming.doctorName": {
+          "type": "string",
+          "pii": false
+        },
+        "upcoming.appointmentDateTime": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "upcoming.displayDate": {
+          "type": "string",
+          "pii": false
+        },
+        "upcoming.displayTime": {
+          "type": "string",
+          "pii": false
+        },
+        "upcoming.durationMinutes": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "upcoming.appointmentType": {
+          "type": "string",
+          "pii": false
+        },
+        "upcoming.status": {
+          "type": "string",
+          "pii": false
+        },
+        "upcoming.isUpcoming": {
+          "type": "boolean",
+          "pii": false
+        },
+        "upcoming.source": {
+          "type": "string",
+          "pii": false
+        },
+        "past.id": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "past.doctorUserId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "past.doctorName": {
+          "type": "string",
+          "pii": false
+        },
+        "past.appointmentDateTime": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "past.displayDate": {
+          "type": "string",
+          "pii": false
+        },
+        "past.displayTime": {
+          "type": "string",
+          "pii": false
+        },
+        "past.durationMinutes": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "past.appointmentType": {
+          "type": "string",
+          "pii": false
+        },
+        "past.status": {
+          "type": "string",
+          "pii": false
+        },
+        "past.isUpcoming": {
+          "type": "boolean",
+          "pii": false
+        },
+        "past.source": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
+      "tool_name": "get_patient_by_id",
+      "path": "/api/thread-management/Patients/{internalId}",
+      "method": "GET",
+      "category": "gp",
+      "write": false,
+      "description": "Fetch one patient record by their internal BP ID. All PII fields (names, DOB, address, phones, Medicare number, emails, displayName, formattedAddress) are REDACTED before you see them; only the internalId, gender, and non-identifying flags come through in the clear. Use the output to confirm you have the right patient before calling follow-up tools; do not try to reconstruct PII from what is visible.",
+      "source": {},
+      "parameters": {
+        "internalId": {
+          "type": "integer",
+          "format": "int32",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "internalId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "firstName": {
+          "type": "string",
+          "pii": true
+        },
+        "surname": {
+          "type": "string",
+          "pii": true
+        },
+        "address1": {
+          "type": "string",
+          "pii": true
+        },
+        "address2": {
+          "type": "string",
+          "pii": true
+        },
+        "city": {
+          "type": "string",
+          "pii": true
+        },
+        "postcode": {
+          "type": "string",
+          "pii": true
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "pii": true,
+          "format": "date-time"
+        },
+        "homePhone": {
+          "type": "string",
+          "pii": true
+        },
+        "workPhone": {
+          "type": "string",
+          "pii": true
+        },
+        "mobilePhone": {
+          "type": "string",
+          "pii": true
+        },
+        "medicareNumber": {
+          "type": "string",
+          "pii": true
+        },
+        "emails.email": {
+          "type": "string",
+          "pii": true
+        },
+        "emails.emailCode": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "displayName": {
+          "type": "string",
+          "pii": true
+        },
+        "formattedAddress": {
+          "type": "string",
+          "pii": true
+        }
+      }
+    },
+    {
+      "tool_name": "search_patients",
+      "path": "/api/thread-management/Patients/search",
+      "method": "GET",
+      "category": "gp",
+      "write": false,
+      "description": "Find patients by first name and/or surname (minimum 2 characters for each supplied term). Returns up to `maxResults` patient records (default 20, max 50). Patient PII (names, DOB, address, phones, Medicare number) is REDACTED before you see it; `internalId` is passed through unchanged and is what you should use to look up the patient in follow-up tools. IMPORTANT: if the number of rows returned equals `maxResults`, there may be more matching patients — tell the user and ask if they want to narrow the search (more specific names) or see additional results (up to 50).",
+      "source": {},
+      "parameters": {
+        "firstName": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "lastName": {
+          "type": "string",
+          "required": false,
+          "in": "query"
+        },
+        "maxResults": {
+          "type": "integer",
+          "format": "int32",
+          "required": false,
+          "in": "query"
+        }
+      },
+      "returns": {
+        "internalId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "firstName": {
+          "type": "string",
+          "pii": true
+        },
+        "surname": {
+          "type": "string",
+          "pii": true
+        },
+        "address1": {
+          "type": "string",
+          "pii": true
+        },
+        "address2": {
+          "type": "string",
+          "pii": true
+        },
+        "city": {
+          "type": "string",
+          "pii": true
+        },
+        "postcode": {
+          "type": "string",
+          "pii": true
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "pii": true,
+          "format": "date-time"
+        },
+        "homePhone": {
+          "type": "string",
+          "pii": true
+        },
+        "workPhone": {
+          "type": "string",
+          "pii": true
+        },
+        "mobilePhone": {
+          "type": "string",
+          "pii": true
+        },
+        "medicareNumber": {
+          "type": "string",
+          "pii": true
+        },
+        "emails.email": {
+          "type": "string",
+          "pii": true
+        },
+        "emails.emailCode": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "displayName": {
+          "type": "string",
+          "pii": true
+        },
+        "formattedAddress": {
+          "type": "string",
+          "pii": true
+        }
+      }
+    }
+  ]
+}

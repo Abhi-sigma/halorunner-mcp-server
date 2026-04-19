@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "gp-mcp-server tools.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "categories", "tools"],
+  "properties": {
+    "$schema":        { "type": "string" },
+    "version":        { "type": "string", "const": "1.0" },
+    "strict_returns": { "type": "boolean", "default": true },
+    "redactionValue": { "type": "string", "default": "REDACTED" },
+
+    "categories": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "summary"],
+        "properties": {
+          "label":   { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+
+    "tools": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/tool" }
+    }
+  },
+
+  "definitions": {
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "path", "method", "category", "description"],
+      "properties": {
+        "tool_name":   { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "path":        { "type": "string", "pattern": "^/" },
+        "method":      { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        "category":    { "type": "string" },
+        "description": { "type": "string", "minLength": 1 },
+        "write":       { "type": "boolean", "default": false },
+        "deprecated":  { "type": "boolean", "default": false },
+        "source": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "swagger_operation_id": { "type": "string" }
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/parameter" }
+        },
+        "returns": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/returnField" }
+        }
+      }
+    },
+
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type":        { "type": "string", "enum": ["string", "number", "integer", "boolean", "object", "array"] },
+        "format":      { "type": "string" },
+        "required":    { "type": "boolean", "default": false },
+        "in":          { "type": "string", "enum": ["query", "path", "body", "header"], "default": "query" },
+        "description": { "type": "string" },
+        "enum":        { "type": "array" },
+        "default":     {}
+      }
+    },
+
+    "returnField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "pii"],
+      "properties": {
+        "type":        { "type": "string", "enum": ["string", "number", "integer", "boolean", "object", "array"] },
+        "pii":         { "type": "boolean" },
+        "format":      { "type": "string" },
+        "description": { "type": "string" }
+      }
+    }
+  }
+}
