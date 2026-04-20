@@ -32,6 +32,48 @@ Requires threading `scopes` through `SessionContext` ([toolRegistry.ts:9-14](../
 
 ---
 
+### A1.3. Pin GitHub OIDC trust policy to immutable `repository_id`
+
+**Risk** — trust policy at [infra/terraform/iam_github_oidc.tf:56-62](../infra/terraform/iam_github_oidc.tf#L56-L62) currently matches on `sub = repo:Abhi-sigma/halorunner-mcp-server:ref:refs/heads/main`. GitHub guarantees `owner/repo` names are unique **at any moment**, but not **over time**. If the `Abhi-sigma` org is ever renamed, deleted, or the account is reclaimed, someone else can create a repo at the same path and their workflow will present a JWT with the exact `sub` our trust policy accepts → they'd inherit deploy credentials to our AWS.
+
+**Proposed** — add two StringEquals conditions on the immutable numeric IDs issued by GitHub at repo/owner creation. These IDs are never reused, even if the repo is deleted or the owner transferred:
+
+```hcl
+condition {
+  test     = "StringEquals"
+  variable = "token.actions.githubusercontent.com:repository_id"
+  values   = ["<numeric repo ID>"]
+}
+condition {
+  test     = "StringEquals"
+  variable = "token.actions.githubusercontent.com:repository_owner_id"
+  values   = ["<numeric owner ID>"]
+}
+```
+
+Lookup:
+```bash
+gh api repos/Abhi-sigma/halorunner-mcp-server --jq '.id, .owner.id'
+```
+
+Or grab from a successful CloudTrail `AssumeRoleWithWebIdentity` event — the claims are in `userIdentity.webIdFederationData.attributes`.
+
+**Effort** — 10 min (lookup + 2 hcl blocks + `terraform apply --no-session`).
+
+---
+
+### A1.5. Add `search_invoices` tool with date filter
+
+**Gap** — current `list_recent_invoices` has no server-side date filter; only `limit`. Claude has to fetch-and-filter client-side, silently misses anything past the limit, and can't cleanly answer "invoices on 18 April".
+
+**Proposed** — wrap the existing `.NET /api/Financial/payments/invoices/search` endpoint as a new MCP tool `search_invoices`. Parameters: `invoiceId?`, `patient?`, `invoiceDate?` (ISO `YYYY-MM-DD`), `status?`. Returns the same `PaymentInvoiceSummaryDto` shape as `list_recent_invoices`.
+
+**Gotcha** — SQL Server's `TRY_CONVERT(date, …)` on the .NET side silently NULLs unparseable dates (returning the full list unfiltered). Add MCP-layer regex validation on `invoiceDate` (must match `^\d{4}-\d{2}-\d{2}$`) and return 400 to Claude if it doesn't. 4-line change.
+
+**Effort** — 10 min.
+
+---
+
 ### A2. `tools.json` coverage lint in CI
 
 **Risk** — the redactor is strict (drops undeclared fields), but the tests in [redact.coverage.test.ts](../src/middleware/redact.coverage.test.ts) only prove the *declared* fields redact correctly. If the .NET API adds a new `ssn` field to a patient endpoint and [tools.json](../src/config/tools.json) isn't updated, that field is silently dropped — safe behaviour but undetected, and the operator would reasonably assume the tool hadn't gained new data. Worse: if someone later flips `strict_returns: false`, the leak is instant.
@@ -111,6 +153,18 @@ GET /health/deep  → CI/readiness probe
 ```
 
 **Effort** — 1-2 hours.
+
+---
+
+## Tier A.6 — DynamoDB-backed MCP session store (required to return to HA)
+
+**Risk** — `sessions` Map in [index.ts:68](../src/index.ts#L68) is per-process. With >1 Fargate task behind the ALB, session state only exists on one task; round-robined follow-up requests 404 on the other task and Claude gets stuck in a re-initialize loop. Currently mitigated by running `desired_count = 1` in staging, which loses HA and causes ~60 s blips on deploys.
+
+**Proposed** — extend the `STORE_DRIVER=dynamo` pattern to cover MCP sessions. Add a fourth Dynamo table `{env}-mcp-sessions` keyed by `mcp-session-id`, with a TTL attribute so idle sessions roll off after (say) 30 min. The per-request session lookup in `handleMcp` becomes a DDB `GetItem`/`PutItem` instead of an in-process Map access. The `McpServer` and `StreamableHTTPServerTransport` instances themselves can't be serialised, so the session record stores only the `userToken` + `mcp-session-id`; the McpServer is built per-request if needed (or kept in a warm pool per-task with LRU).
+
+Lift `desired_count` back to 2+ once this lands.
+
+**Effort** — ~2-4 hours (schema, Dynamo adapter, replace the in-memory Map, tests).
 
 ---
 
