@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ inputs.image_sha }}
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/github-actions-gp-mcp-deploy-production
           aws-region: ${{ env.AWS_REGION }}
