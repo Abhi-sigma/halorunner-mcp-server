@@ -36,8 +36,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          # Replace with the IAM role ARN created for GitHub OIDC federation.
-          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/github-actions-gp-mcp-deploy-staging
+          role-to-assume: arn:aws:iam::702767218796:role/github-actions-gp-mcp-deploy-staging
           aws-region: ${{ env.AWS_REGION }}
 
       - uses: aws-actions/amazon-ecr-login@v2

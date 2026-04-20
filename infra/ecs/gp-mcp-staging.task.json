@@ -1,0 +1,113 @@
+{
+    "family": "staging-gp-mcp",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "512",
+    "memory": "1024",
+    "executionRoleArn": "arn:aws:iam::702767218796:role/staging-gp-mcp-task-exec",
+    "taskRoleArn": "arn:aws:iam::702767218796:role/staging-gp-mcp-task",
+    "containerDefinitions": [
+        {
+            "name": "gp-mcp",
+            "image": "702767218796.dkr.ecr.ap-southeast-2.amazonaws.com/gp-mcp-server:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 3000,
+                    "hostPort": 3000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "API_BASE_URL",
+                    "value": "https://api.staging.ygpapp.com/web"
+                },
+                {
+                    "name": "CORS_ALLOWED_ORIGINS",
+                    "value": "https://claude.ai,https://app.claude.ai"
+                },
+                {
+                    "name": "PORT",
+                    "value": "3000"
+                },
+                {
+                    "name": "COGNITO_HOSTED_UI_DOMAIN",
+                    "value": "https://ap-southeast-27aeltclxs.auth.ap-southeast-2.amazoncognito.com"
+                },
+                {
+                    "name": "COGNITO_USER_POOL_ID",
+                    "value": "ap-southeast-2_7AEltCLXS"
+                },
+                {
+                    "name": "STORE_DRIVER",
+                    "value": "dynamo"
+                },
+                {
+                    "name": "DDB_CODES_TABLE",
+                    "value": "staging-mcp-codes"
+                },
+                {
+                    "name": "COGNITO_SCOPES",
+                    "value": "openid email phone profile"
+                },
+                {
+                    "name": "SECRETS_MANAGER_SECRET_ID",
+                    "value": "arn:aws:secretsmanager:ap-southeast-2:702767218796:secret:gp-mcp/staging/env-HD2wEi"
+                },
+                {
+                    "name": "COGNITO_REGION",
+                    "value": "ap-southeast-2"
+                },
+                {
+                    "name": "DDB_CLIENTS_TABLE",
+                    "value": "staging-mcp-clients"
+                },
+                {
+                    "name": "NODE_ENV",
+                    "value": "production"
+                },
+                {
+                    "name": "PUBLIC_BASE_URL",
+                    "value": "https://mcp-staging.ygpapp.com"
+                },
+                {
+                    "name": "DDB_PENDING_TABLE",
+                    "value": "staging-mcp-pending-auths"
+                },
+                {
+                    "name": "LOG_LEVEL",
+                    "value": "info"
+                },
+                {
+                    "name": "COGNITO_CLIENT_ID",
+                    "value": "7c3delbo3qpf0n5ek1bu37itmc"
+                }
+            ],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/staging-gp-mcp",
+                    "awslogs-region": "ap-southeast-2",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "healthCheck": {
+                "command": [
+                    "CMD-SHELL",
+                    "node -e \"fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+                ],
+                "interval": 30,
+                "timeout": 5,
+                "retries": 3,
+                "startPeriod": 30
+            },
+            "systemControls": []
+        }
+    ]
+}
