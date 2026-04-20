@@ -1,0 +1,10 @@
+# Local state and plans
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terraform.lock.hcl.bak
+
+# Provider cache
+crash.log
+crash.*.log
