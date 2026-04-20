@@ -4,9 +4,9 @@
 # Everything here already matches the defaults in variables.tf — kept in a
 # .tfvars file so you can diff staging vs prod later at a glance.
 
-env                = "staging"
-aws_region         = "ap-southeast-2"
-aws_account_id     = "702767218796"
+env            = "staging"
+aws_region     = "ap-southeast-2"
+aws_account_id = "702767218796"
 
 vpc_cidr            = "10.10.0.0/16"
 public_subnet_cidrs = ["10.10.1.0/24", "10.10.2.0/24"]

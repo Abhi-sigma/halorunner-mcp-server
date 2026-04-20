@@ -69,8 +69,8 @@ resource "aws_iam_role" "github_actions_deploy" {
 data "aws_iam_policy_document" "github_deploy" {
   # ECR auth + push to our repo only (not the entire account's ECR).
   statement {
-    sid     = "EcrAuth"
-    actions = ["ecr:GetAuthorizationToken"]
+    sid       = "EcrAuth"
+    actions   = ["ecr:GetAuthorizationToken"]
     resources = ["*"] # GetAuthorizationToken doesn't support resource-level perms
   }
 

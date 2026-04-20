@@ -132,22 +132,22 @@ resource "aws_ecs_task_definition" "mcp" {
       ]
 
       environment = [
-        { name = "NODE_ENV",                     value = "production" },
-        { name = "PORT",                         value = "3000" },
-        { name = "LOG_LEVEL",                    value = "info" },
-        { name = "API_BASE_URL",                 value = var.upstream_api_base_url },
-        { name = "PUBLIC_BASE_URL",              value = "https://${var.mcp_hostname}" },
-        { name = "COGNITO_REGION",               value = var.aws_region },
-        { name = "COGNITO_USER_POOL_ID",         value = var.cognito_user_pool_id },
-        { name = "COGNITO_CLIENT_ID",            value = var.cognito_client_id },
-        { name = "COGNITO_HOSTED_UI_DOMAIN",     value = var.cognito_hosted_ui_domain },
-        { name = "COGNITO_SCOPES",               value = "openid email phone profile" },
-        { name = "CORS_ALLOWED_ORIGINS",         value = var.cors_allowed_origins },
-        { name = "STORE_DRIVER",                 value = "dynamo" },
-        { name = "DDB_CLIENTS_TABLE",            value = aws_dynamodb_table.mcp_clients.name },
-        { name = "DDB_PENDING_TABLE",            value = aws_dynamodb_table.mcp_pending_auths.name },
-        { name = "DDB_CODES_TABLE",              value = aws_dynamodb_table.mcp_codes.name },
-        { name = "SECRETS_MANAGER_SECRET_ID",    value = aws_secretsmanager_secret.mcp.arn },
+        { name = "NODE_ENV", value = "production" },
+        { name = "PORT", value = "3000" },
+        { name = "LOG_LEVEL", value = "info" },
+        { name = "API_BASE_URL", value = var.upstream_api_base_url },
+        { name = "PUBLIC_BASE_URL", value = "https://${var.mcp_hostname}" },
+        { name = "COGNITO_REGION", value = var.aws_region },
+        { name = "COGNITO_USER_POOL_ID", value = var.cognito_user_pool_id },
+        { name = "COGNITO_CLIENT_ID", value = var.cognito_client_id },
+        { name = "COGNITO_HOSTED_UI_DOMAIN", value = var.cognito_hosted_ui_domain },
+        { name = "COGNITO_SCOPES", value = "openid email phone profile" },
+        { name = "CORS_ALLOWED_ORIGINS", value = var.cors_allowed_origins },
+        { name = "STORE_DRIVER", value = "dynamo" },
+        { name = "DDB_CLIENTS_TABLE", value = aws_dynamodb_table.mcp_clients.name },
+        { name = "DDB_PENDING_TABLE", value = aws_dynamodb_table.mcp_pending_auths.name },
+        { name = "DDB_CODES_TABLE", value = aws_dynamodb_table.mcp_codes.name },
+        { name = "SECRETS_MANAGER_SECRET_ID", value = aws_secretsmanager_secret.mcp.arn },
       ]
 
       # ECS integrates logs with CloudWatch via this driver.
