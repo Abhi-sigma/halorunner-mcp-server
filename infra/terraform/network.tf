@@ -86,7 +86,7 @@ resource "aws_vpc_endpoint" "dynamodb" {
 # ALB SG: open to the internet on 443.
 resource "aws_security_group" "alb" {
   name        = "${var.env}-gp-mcp-alb"
-  description = "Internet → ALB on 443"
+  description = "Internet to ALB on 443/80"
   vpc_id      = aws_vpc.mcp.id
 
   ingress {
@@ -123,7 +123,7 @@ resource "aws_security_group" "alb" {
 # DynamoDB (via gateway endpoint).
 resource "aws_security_group" "fargate" {
   name        = "${var.env}-gp-mcp-fargate"
-  description = "ALB → Fargate on 3000"
+  description = "ALB to Fargate on 3000"
   vpc_id      = aws_vpc.mcp.id
 
   ingress {
