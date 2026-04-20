@@ -965,6 +965,220 @@
       }
     },
     {
+      "tool_name": "get_admin_payment_report",
+      "path": "/api/Financial/payments/admin/report",
+      "method": "GET",
+      "category": "billing",
+      "write": false,
+      "description": "Admin payment reconciliation report. One row per invoice in the date range with the full banking + Medicare/DVA picture: invoice total and status, Tyro transaction ref + MID/TID, banking batch + bank date + bank amount, payment method and reference, plus Medicare/DVA claim status and amounts paid. Requires admin role on the caller's JWT — non-admin users get 403. Use for reconciliation questions: 'which invoices weren't banked', 'reconcile batch X', 'Medicare claim status for April', 'what Dr Smith billed last week paid vs unpaid'. Dates MUST be ISO YYYY-MM-DD; unparseable dates are silently dropped upstream (SQL Server TRY_CONVERT). patientName is REDACTED; every other field is non-PII. Response is paginated — pageSize capped at 2000, default 50; honour totalCount to decide whether to page further.",
+      "source": {},
+      "parameters": {
+        "fromDate": {
+          "type": "string",
+          "required": false,
+          "in": "query",
+          "format": "date",
+          "description": "Start of date range, ISO YYYY-MM-DD. Inclusive."
+        },
+        "toDate": {
+          "type": "string",
+          "required": false,
+          "in": "query",
+          "format": "date",
+          "description": "End of date range, ISO YYYY-MM-DD. Inclusive."
+        },
+        "provider": {
+          "type": "string",
+          "required": false,
+          "in": "query",
+          "description": "Provider name substring filter (e.g. 'Smith')."
+        },
+        "status": {
+          "type": "string",
+          "required": false,
+          "in": "query",
+          "enum": ["Paid", "Unpaid", "PaidNotPosted"],
+          "description": "Filter by invoice payment status."
+        },
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "required": false,
+          "in": "query",
+          "description": "1-indexed page number. Default 1."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "required": false,
+          "in": "query",
+          "description": "Rows per page. Default 50, max 2000."
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.page": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.pageSize": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.totalCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.invoiceId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.invoiceDate": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.items.patientId": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.patientName": {
+          "type": "string",
+          "pii": true
+        },
+        "data.items.providerName": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.providerId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.total": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.items.status": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.postedToBp": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.items.tyroTransactionRef": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.mid": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.tid": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.bankingBatch": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.bankDate": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.items.bankingAmount": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.items.bkPaymentType": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.paymentReference": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.paymentMethod": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.paymentId": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.paymentDate": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "data.items.mbsItem": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.isBulkBilled": {
+          "type": "boolean",
+          "pii": false
+        },
+        "data.items.serviceCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.medicareBatchedCount": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "data.items.medicarePaid": {
+          "type": "number",
+          "pii": false,
+          "format": "double"
+        },
+        "data.items.medicareClaimStatus": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.medicareClaimId": {
+          "type": "string",
+          "pii": false
+        },
+        "data.items.payerCode": {
+          "type": "integer",
+          "pii": false,
+          "format": "int32"
+        },
+        "message": {
+          "type": "string",
+          "pii": false
+        },
+        "errorCode": {
+          "type": "string",
+          "pii": false
+        },
+        "timestamp": {
+          "type": "string",
+          "pii": false,
+          "format": "date-time"
+        },
+        "requestId": {
+          "type": "string",
+          "pii": false
+        }
+      }
+    },
+    {
       "tool_name": "get_patient_appointments",
       "path": "/api/thread-management/patient-file/{patientId}/appointments",
       "method": "GET",
