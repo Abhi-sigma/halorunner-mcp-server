@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { randomBytes, createHash } from "node:crypto";
 import { env } from "../lib/env.js";
 import { logger } from "../lib/logger.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 import { inMemoryStores, type CognitoTokenResponse, type Stores } from "./stores.js";
 
 /**
@@ -54,9 +55,14 @@ export function oauthRouter(stores: Stores = inMemoryStores()): Router {
   });
 
   // ---- /oauth/register (RFC 7591) ----------------------------------------
-  // TODO: add IP rate-limit. The MAX_CLIENTS cap in stores.ts is a backstop.
+  // Per-IP rate limit: 10 registrations / hour. MAX_CLIENTS in stores.ts is
+  // the second-line cap. Real clients register once and cache the client_id
+  // for 30 days; anything above single-digit hourly registrations per IP is
+  // almost certainly a flood.
 
-  r.post("/oauth/register", async (req: Request, res: Response) => {
+  const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10 });
+
+  r.post("/oauth/register", registerLimiter, async (req: Request, res: Response) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const redirectUris = body.redirect_uris;
 

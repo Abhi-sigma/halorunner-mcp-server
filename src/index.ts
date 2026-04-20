@@ -11,11 +11,21 @@ import { loadToolsConfig } from "./config/schema.js";
 import { buildRedactionPlans } from "./middleware/redact.js";
 import { verifyCognitoToken } from "./auth/jwtVerify.js";
 import { oauthRouter } from "./auth/oauth.js";
+import { inMemoryStores, type Stores } from "./auth/stores.js";
+import { dynamoStores } from "./auth/stores.dynamo.js";
+import { loadSecretsIntoEnv } from "./lib/secrets.js";
 import { installAllTools } from "./services/categoryDiscovery.js";
 
 const PROTECTED_RESOURCE_PATH = "/.well-known/oauth-protected-resource";
 
 async function main() {
+  // Pull secrets first so env() sees them on its first call. The secret ID
+  // and optional region are read from raw process.env (not yet validated).
+  await loadSecretsIntoEnv(
+    process.env.SECRETS_MANAGER_SECRET_ID,
+    process.env.COGNITO_REGION
+  );
+
   const e = env();
   const config = await loadToolsConfig();
   const plans = buildRedactionPlans(config);
@@ -31,6 +41,11 @@ async function main() {
   );
 
   const app = express();
+
+  // Behind ALB / CloudFront: trust one proxy hop so req.ip is the real client.
+  // Without this, the rate limiter sees the load balancer's IP and degenerates
+  // into a single global counter.
+  app.set("trust proxy", 1);
 
   // CORS — MCP requests from Claude.ai come from a browser origin.
   // The session-id header must be exposed so Claude can read it from responses.
@@ -55,7 +70,18 @@ async function main() {
 
   // MCP Authorization Server + Protected Resource metadata + DCR bridge.
   // See src/auth/oauth.ts for the full endpoint map.
-  app.use(oauthRouter());
+  const stores: Stores = e.STORE_DRIVER === "dynamo"
+    ? dynamoStores(
+        {
+          clients: e.DDB_CLIENTS_TABLE!,
+          pending: e.DDB_PENDING_TABLE!,
+          codes:   e.DDB_CODES_TABLE!
+        },
+        e.COGNITO_REGION
+      )
+    : inMemoryStores();
+  logger.info({ driver: e.STORE_DRIVER }, "auth stores initialised");
+  app.use(oauthRouter(stores));
 
   // MCP transport: one McpServer + one StreamableHTTPServerTransport per session.
   // Session state (which categories are loaded, the current Bearer token) lives

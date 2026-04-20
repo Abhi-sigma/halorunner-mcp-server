@@ -1,6 +1,12 @@
+import { createHash } from "node:crypto";
 import { env } from "../lib/env.js";
 import { logger } from "../lib/logger.js";
 import type { ToolDef } from "../config/schema.js";
+
+function hashForLog(text: string): string {
+  if (text.length === 0) return "empty";
+  return createHash("sha256").update(text).digest("hex").slice(0, 12);
+}
 
 export interface CallResult {
   status: number;
@@ -86,12 +92,19 @@ export async function callUpstream(
       "upstream call"
     );
 
-    // Log the error body so we can diagnose upstream 4xx/5xx failures
-    // without needing access to the .NET API console. Safe to log because
-    // error responses are usually server-generated messages, not PII.
+    // Log a digest of upstream errors — hash of the body + status + length.
+    // The body itself is NOT logged: in production a 500 stack trace can
+    // quote request data back, and request data may contain PII (patient
+    // search strings, patient IDs with context, etc.). The hash lets you
+    // correlate repeated identical errors without exposing content.
     if (res.status >= 400) {
       logger.warn(
-        { tool: tool.tool_name, status: res.status, body: text.slice(0, 2000) },
+        {
+          tool: tool.tool_name,
+          status: res.status,
+          bodyHash: hashForLog(text),
+          bodyLength: text.length
+        },
         "upstream error response"
       );
     }

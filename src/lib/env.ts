@@ -18,7 +18,19 @@ const schema = z.object({
 
   // Comma-separated list of origins allowed to hit /mcp.
   // Dev default is permissive; in production set this explicitly.
-  CORS_ALLOWED_ORIGINS: z.string().default("*")
+  CORS_ALLOWED_ORIGINS: z.string().default("*"),
+
+  // Storage driver for DCR clients, pending auths, and issued codes.
+  //   memory  — in-process Map, single-node only (dev default).
+  //   dynamo  — DynamoDB, required for multi-instance / durable deploys.
+  STORE_DRIVER: z.enum(["memory", "dynamo"]).default("memory"),
+  DDB_CLIENTS_TABLE: z.string().optional(),
+  DDB_PENDING_TABLE: z.string().optional(),
+  DDB_CODES_TABLE: z.string().optional(),
+
+  // Optional Secrets Manager secret ID. If set, pulled at boot and merged
+  // into process.env BEFORE env() runs. Secret must be JSON of {KEY:VALUE}.
+  SECRETS_MANAGER_SECRET_ID: z.string().optional()
 });
 
 export type Env = z.infer<typeof schema>;
@@ -32,8 +44,51 @@ export function env(): Env {
     const issues = parsed.error.issues.map(i => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
+  assertProductionInvariants(parsed.data);
   cached = parsed.data;
   return cached;
+}
+
+/**
+ * Fail loudly on startup if production-only invariants are violated.
+ * These are mistakes that are safe in dev but actively dangerous with real
+ * PII in flight — wildcard CORS, missing Cognito pool, etc.
+ */
+function assertProductionInvariants(e: Env): void {
+  if (e.NODE_ENV !== "production" && e.NODE_ENV !== "staging") return;
+
+  const origins = e.CORS_ALLOWED_ORIGINS.split(",").map(s => s.trim()).filter(Boolean);
+  if (origins.includes("*") || origins.length === 0) {
+    throw new Error(
+      `CORS_ALLOWED_ORIGINS must be set to explicit origins in ${e.NODE_ENV} (got "${e.CORS_ALLOWED_ORIGINS}"). ` +
+        `Wildcard CORS is blocked because the /mcp endpoint serves authenticated PII.`
+    );
+  }
+  for (const origin of origins) {
+    if (!/^https:\/\//.test(origin)) {
+      throw new Error(
+        `CORS origin "${origin}" must use https:// in ${e.NODE_ENV}. Plain http:// origins are blocked.`
+      );
+    }
+  }
+
+  if (e.STORE_DRIVER === "memory") {
+    throw new Error(
+      `STORE_DRIVER=memory is not permitted in ${e.NODE_ENV}. Use dynamo and configure ` +
+        `DDB_CLIENTS_TABLE / DDB_PENDING_TABLE / DDB_CODES_TABLE.`
+    );
+  }
+
+  if (e.STORE_DRIVER === "dynamo") {
+    const missing = [
+      !e.DDB_CLIENTS_TABLE && "DDB_CLIENTS_TABLE",
+      !e.DDB_PENDING_TABLE && "DDB_PENDING_TABLE",
+      !e.DDB_CODES_TABLE && "DDB_CODES_TABLE"
+    ].filter(Boolean);
+    if (missing.length) {
+      throw new Error(`STORE_DRIVER=dynamo requires: ${missing.join(", ")}`);
+    }
+  }
 }
 
 export function cognitoAuthority(e: Env = env()): string {
