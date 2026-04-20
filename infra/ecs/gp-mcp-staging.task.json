@@ -11,7 +11,7 @@
     "containerDefinitions": [
         {
             "name": "gp-mcp",
-            "image": "702767218796.dkr.ecr.ap-southeast-2.amazonaws.com/gp-mcp-server:latest",
+            "image": "702767218796.dkr.ecr.ap-southeast-2.amazonaws.com/gp-mcp-server:staging",
             "cpu": 0,
             "portMappings": [
                 {

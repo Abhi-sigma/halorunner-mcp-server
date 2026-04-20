@@ -102,11 +102,17 @@ resource "aws_iam_role_policy" "task" {
 
 # ---- Task definition ---------------------------------------------------
 #
-# Container image is a placeholder here — GitHub Actions overrides it at
-# deploy time via render-task-definition + deploy-task-definition. The
-# :latest tag just ensures the initial deploy has something to land on
-# (or you can bootstrap with an `aws ecs update-service --force-new-deployment`
-# after the first docker push).
+# Container image here references the `:staging` floating tag, which CI
+# publishes on every successful deploy. GitHub Actions still renders the
+# task def on each run with the specific `:<SHA>` tag for audit, so this
+# value is only used for:
+#   a) the very first apply before CI has ever run (service will fail to
+#      start until the first CI push lands — this is normal chicken-and-egg)
+#   b) any manual `terraform apply` later, which no-ops on the service via
+#      the lifecycle.ignore_changes rule below
+#
+# DO NOT use `:latest` — if CI doesn't push that tag, the service 404s on
+# pull and deploys itself into a circuit-breaker failure.
 
 resource "aws_ecs_task_definition" "mcp" {
   family                   = "${var.env}-gp-mcp"
@@ -120,7 +126,7 @@ resource "aws_ecs_task_definition" "mcp" {
   container_definitions = jsonencode([
     {
       name      = "gp-mcp"
-      image     = "${aws_ecr_repository.mcp.repository_url}:latest"
+      image     = "${aws_ecr_repository.mcp.repository_url}:staging"
       essential = true
 
       portMappings = [
