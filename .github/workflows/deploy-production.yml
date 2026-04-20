@@ -1,0 +1,76 @@
+name: deploy-production
+
+# Production deploys are manual. Pick the commit SHA to ship (must already
+# be built + deployed to staging by the staging workflow).
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: "Commit SHA of the image to deploy (must exist in ECR)"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: gp-mcp-server
+  ECS_CLUSTER: gp-mcp-production
+  ECS_SERVICE: gp-mcp
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production     # GitHub env gate — add approvers in repo settings
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_sha }}
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/github-actions-gp-mcp-deploy-production
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Verify image exists in ECR
+        run: |
+          aws ecr describe-images \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-ids imageTag=${{ inputs.image_sha }}
+
+      - name: Tag image as :production for audit trail
+        run: |
+          MANIFEST=$(aws ecr batch-get-image \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-ids imageTag=${{ inputs.image_sha }} \
+            --query 'images[0].imageManifest' --output text)
+          aws ecr put-image \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-tag production \
+            --image-manifest "$MANIFEST"
+
+      - name: Render task definition
+        id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: infra/ecs/gp-mcp-production.task.json
+          container-name: gp-mcp
+          image: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ inputs.image_sha }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 15

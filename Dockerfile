@@ -1,21 +1,30 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22-alpine AS build
+FROM node:22-alpine AS base
 WORKDIR /app
+
+# Full deps (includes tsx, typescript, @types/*) for the build stage.
+FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+# Prod-only deps for the runtime stage. Runs in parallel with `build` under BuildKit.
+FROM base AS prod-deps
+COPY package.json package-lock.json* ./
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
+
+# Compile TypeScript → dist/.
+FROM deps AS build
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN npm run build
 
-FROM node:22-alpine AS runtime
-WORKDIR /app
+# Slim runtime: prod node_modules + compiled JS + config.
+FROM base AS runtime
 ENV NODE_ENV=production
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev && npm cache clean --force
-COPY --from=build /app/dist ./dist
-COPY src/config/tools.json ./dist/config/tools.json
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build     /app/dist          ./dist
+COPY                  package.json       ./package.json
 
-# Run as non-root.
 USER node
 
 EXPOSE 3000

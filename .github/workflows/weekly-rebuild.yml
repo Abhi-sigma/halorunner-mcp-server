@@ -1,0 +1,18 @@
+name: weekly-rebuild
+
+# Rebuild + redeploy to staging every week to pick up base-image security
+# patches (alpine CVEs, node runtime fixes) without waiting for a code change.
+# Re-runs the full deploy-staging pipeline against the current main HEAD.
+
+on:
+  schedule:
+    - cron: "0 18 * * 0"   # Sunday 18:00 UTC = Monday 05:00/06:00 Sydney
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  rebuild:
+    uses: ./.github/workflows/deploy-staging.yml

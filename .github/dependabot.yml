@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # Node / npm dependencies
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      aws-sdk:
+        patterns:
+          - "@aws-sdk/*"
+      dev-deps:
+        dependency-type: development
+
+  # Dockerfile FROM lines (node:22-alpine → new digest when Alpine/Node patch)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+
+  # GitHub Actions pinned versions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
