@@ -56,9 +56,9 @@ variable "mcp_hostname" {
 # ---- App config (non-secret) --------------------------------------------
 
 variable "upstream_api_base_url" {
-  description = "The .NET API Gateway URL the MCP server calls"
+  description = "The .NET API Gateway URL the MCP server calls. Staging uses bare host; production uses /web prefix (different gateway routing)."
   type        = string
-  default     = "https://api.staging.ygpapp.com/web"
+  default     = "https://api.staging.ygpapp.com"
 }
 
 variable "cognito_user_pool_id" {
@@ -100,9 +100,9 @@ variable "fargate_memory" {
 }
 
 variable "desired_count" {
-  description = "Number of Fargate tasks in the service. 2 = HA across AZs."
+  description = "Number of Fargate tasks. Keep at 1 until the MCP session Map is moved to DynamoDB — see doc/security-todo.md Tier A.6. Running >1 with in-memory sessions causes ALB-routed requests to 404 on the task that doesn't hold the session."
   type        = number
-  default     = 2
+  default     = 1
 }
 
 # ---- GitHub OIDC --------------------------------------------------------

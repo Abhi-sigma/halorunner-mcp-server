@@ -15,7 +15,7 @@ availability_zones  = ["ap-southeast-2a", "ap-southeast-2b"]
 route53_zone_name = "ygpapp.com"
 mcp_hostname      = "mcp-staging.ygpapp.com"
 
-upstream_api_base_url    = "https://api.staging.ygpapp.com/web"
+upstream_api_base_url    = "https://api.staging.ygpapp.com"
 cognito_user_pool_id     = "ap-southeast-2_7AEltCLXS"
 cognito_client_id        = "7c3delbo3qpf0n5ek1bu37itmc"
 cognito_hosted_ui_domain = "https://ap-southeast-27aeltclxs.auth.ap-southeast-2.amazoncognito.com"
@@ -23,6 +23,6 @@ cors_allowed_origins     = "https://claude.ai,https://app.claude.ai"
 
 fargate_cpu    = 512
 fargate_memory = 1024
-desired_count  = 2
+desired_count  = 1
 
 github_repo = "Abhi-sigma/halorunner-mcp-server"
