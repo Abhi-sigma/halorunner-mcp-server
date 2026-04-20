@@ -24,7 +24,7 @@
             "environment": [
                 {
                     "name": "API_BASE_URL",
-                    "value": "https://api.staging.ygpapp.com/web"
+                    "value": "https://api.staging.ygpapp.com"
                 },
                 {
                     "name": "CORS_ALLOWED_ORIGINS",
