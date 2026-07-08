@@ -19,6 +19,10 @@
     "admin": {
       "label": "Administration",
       "summary": "Practice dashboards"
+    },
+    "reception": {
+      "label": "Reception staffing",
+      "summary": "Reception-load calc: staffing vs demand per 10-min bucket per side"
     }
   },
   "tools": [
@@ -1481,6 +1485,82 @@
           "type": "string",
           "pii": true
         }
+      }
+    },
+    {
+      "tool_name": "get_reception_load",
+      "path": "/api/mcp/v1/reception-load/{date}/{location}",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "Reception-staffing load snapshot for one location on one date, at 10-minute-bucket resolution. Returns per-hour rollups AND the six 10-min buckets inside each hour. Each row exposes minutes available (rostered − breaks + manager coverage − Side Quest peels), minutes needed (appts + calls + overhead), load% (max across buckets — spikes not smoothed), status (ok/tight/overload/closed/shared), plus per-doctor check-in / check-out flow. Multi-side locations (e.g. Crace with Rec 1 / Rec 2) emit one row per side keyed by `partKey` — do NOT sum sides for a location total, they represent independent pools. Pool sharers emit a `sharingTarget` field pointing at the leader. Use this to answer 'how is Tuesday shaping up at Crace', 'where's the peak', 'which side is under pressure', or as raw material to reason about staffing changes. Date is ISO (YYYY-MM-DD). No PII.",
+      "source": {},
+      "parameters": {
+        "date": {
+          "type": "string",
+          "required": true,
+          "in": "path",
+          "format": "date"
+        },
+        "location": {
+          "type": "string",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.date": { "type": "string", "pii": false, "format": "date" },
+        "data.hours.hour": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.networkTotalCalls": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.networkAvailableMinutes": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.networkNeededMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.locations.locationName": { "type": "string", "pii": false },
+        "data.hours.locations.sharingTarget": { "type": "string", "pii": false },
+        "data.hours.locations.sharedFrom": { "type": "string", "pii": false },
+        "data.hours.locations.partKey": { "type": "string", "pii": false },
+        "data.hours.locations.partDisplayName": { "type": "string", "pii": false },
+        "data.hours.locations.appointmentCount": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.locations.staffCount": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.locations.minutesAvailable": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.locations.minutesForAppointments": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.locations.minutesForCalls": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.locations.minutesNeeded": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.locations.loadPercent": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.locations.status": { "type": "string", "pii": false },
+        "data.hours.locations.expectedCalls": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.locations.callCapacity": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.locations.breakMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.locations.managerMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.locations.sideQuestMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.locations.spareAfterCallsMin": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.bucketIndex": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.buckets.startMinuteOfDay": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.buckets.startTimeLabel": { "type": "string", "pii": false },
+        "data.hours.buckets.locations.locationName": { "type": "string", "pii": false },
+        "data.hours.buckets.locations.sharingTarget": { "type": "string", "pii": false },
+        "data.hours.buckets.locations.partKey": { "type": "string", "pii": false },
+        "data.hours.buckets.locations.partDisplayName": { "type": "string", "pii": false },
+        "data.hours.buckets.locations.appointmentMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.overheadMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.callMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.breakMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.managerMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.sideQuestMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.availableMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.neededMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.loadPercent": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.buckets.locations.status": { "type": "string", "pii": false },
+        "data.hours.buckets.locations.spareAfterCallsMin": { "type": "number", "pii": false, "format": "double" },
+        "data.hours.buckets.locations.expectedCalls": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.buckets.locations.callCapacity": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.buckets.locations.doctorFlow.doctorName": { "type": "string", "pii": false },
+        "data.hours.buckets.locations.doctorFlow.checkIns": { "type": "integer", "pii": false, "format": "int32" },
+        "data.hours.buckets.locations.doctorFlow.checkOuts": { "type": "integer", "pii": false, "format": "int32" }
       }
     }
   ]
