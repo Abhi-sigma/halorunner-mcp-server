@@ -1562,6 +1562,82 @@
         "data.hours.buckets.locations.doctorFlow.checkIns": { "type": "integer", "pii": false, "format": "int32" },
         "data.hours.buckets.locations.doctorFlow.checkOuts": { "type": "integer", "pii": false, "format": "int32" }
       }
+    },
+    {
+      "tool_name": "list_locations",
+      "path": "/api/mcp/v1/locations",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "Every practice location the caller can see. Use as the starting point when you don't know a location's exact name (path params on the other reception tools are exact matches, case-sensitive). Returns id + name only — for pool relationships (which locations share with which) use get_pool_topology; for multi-side splits use get_side_policy. No PII.",
+      "source": {},
+      "parameters": {},
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.locationId": { "type": "integer", "pii": false, "format": "int32" },
+        "data.locationName": { "type": "string", "pii": false }
+      }
+    },
+    {
+      "tool_name": "get_pool_topology",
+      "path": "/api/mcp/v1/pool-topology",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "Configured pool mode for every location, static (not date-dependent). Mode is 'own' (self-pooling location like Crace, Lyneham) or 'shared' (feeds its check-outs into another leader — sharedFromLocation points at the target, e.g. Crace4Kids → Crace). Use this to answer 'is X normally pooled with Y' or to interpret sharingTarget/sharedFrom fields in get_reception_load's response. No PII.",
+      "source": {},
+      "parameters": {},
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.locationName": { "type": "string", "pii": false },
+        "data.mode": { "type": "string", "pii": false },
+        "data.sharedFromLocation": { "type": "string", "pii": false }
+      }
+    },
+    {
+      "tool_name": "get_side_policy",
+      "path": "/api/mcp/v1/side-policy/{location}",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "How a location is split into sides (e.g. Crace → Rec 1 / Rec 2) and how doctors + reception departments are attributed to each side. Combines three underlying configs in one call: sides (partKey + displayName + check-in share %), doctor-side mappings (which doctor's check-outs land on which side), and department-side mappings (which BP reception departments feed which side). Empty sides list = no split configured, single-pool math applies. Static config, not date-dependent. No PII.",
+      "source": {},
+      "parameters": {
+        "location": {
+          "type": "string",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.location": { "type": "string", "pii": false },
+        "data.sides.id": { "type": "integer", "pii": false, "format": "int32" },
+        "data.sides.locationName": { "type": "string", "pii": false },
+        "data.sides.partKey": { "type": "string", "pii": false },
+        "data.sides.displayName": { "type": "string", "pii": false },
+        "data.sides.checkInSharePercent": { "type": "integer", "pii": false, "format": "int32" },
+        "data.sides.displayOrder": { "type": "integer", "pii": false, "format": "int32" },
+        "data.doctorSides.id": { "type": "integer", "pii": false, "format": "int32" },
+        "data.doctorSides.locationName": { "type": "string", "pii": false },
+        "data.doctorSides.doctorUserId": { "type": "integer", "pii": false, "format": "int32" },
+        "data.doctorSides.doctorDisplayName": { "type": "string", "pii": false },
+        "data.doctorSides.partKey": { "type": "string", "pii": false },
+        "data.departmentSides.deptId": { "type": "string", "pii": false },
+        "data.departmentSides.partKey": { "type": "string", "pii": false }
+      }
     }
   ]
 }
