@@ -22,7 +22,7 @@
     },
     "reception": {
       "label": "Reception staffing",
-      "summary": "Reception-load calc: staffing vs demand per 10-min bucket per side"
+      "summary": "Reception staffing analytics. Two layers: `get_reception_load` for the runtime picture (staff vs demand per 10-min bucket per side), and `get_pool_topology` / `get_side_policy` / `list_locations` for the configured relationships that shape it. When a location shows demand but zero rostered staff, that's a red flag — verify via pool-topology whether it should be shared, cross-check the roster with `get_roster_day`, and if still ambiguous ask the user rather than assume."
     }
   },
   "tools": [
@@ -1493,7 +1493,7 @@
       "method": "GET",
       "category": "reception",
       "write": false,
-      "description": "Reception-staffing load snapshot for one location on one date, at 10-minute-bucket resolution. Returns per-hour rollups AND the six 10-min buckets inside each hour. Each row exposes minutes available (rostered − breaks + manager coverage − Side Quest peels), minutes needed (appts + calls + overhead), load% (max across buckets — spikes not smoothed), status (ok/tight/overload/closed/shared), plus per-doctor check-in / check-out flow. Multi-side locations (e.g. Crace with Rec 1 / Rec 2) emit one row per side keyed by `partKey` — do NOT sum sides for a location total, they represent independent pools. Pool sharers emit a `sharingTarget` field pointing at the leader. Use this to answer 'how is Tuesday shaping up at Crace', 'where's the peak', 'which side is under pressure', or as raw material to reason about staffing changes. Date is ISO (YYYY-MM-DD). No PII.",
+      "description": "Reception-staffing load snapshot for one location on one date, at 10-minute-bucket resolution. Returns per-hour rollups AND the six 10-min buckets inside each hour. Each row exposes minutes available (rostered − breaks + manager coverage − Side Quest peels), minutes needed (appts + calls + overhead), load% (MAX across buckets — spikes not smoothed away), plus per-doctor check-in / check-out flow.\n\nStatus codes: `ok` / `tight` / `overload` = staffed pool with load in the healthy / warning / red range. `shared` = this row is a sharer whose demand is analysed on its leader (see sharingTarget). `closed` = zero rostered staff on this row; NOTE this does NOT mean zero demand — a `closed` row can still carry real `minutesForAppointments` and `minutesForCalls` from a booked schedule. That's the shape of unmet demand or informally-covered coverage; cross-reference `get_pool_topology` to see if it should be shared, and `get_roster_day` to see if any staff might informally cover it.\n\nMulti-side locations (e.g. Crace with Rec 1 / Rec 2) emit one row per side keyed by `partKey` — do NOT sum sides for a location total, they represent independent pools. Pool sharers emit a `sharingTarget` field pointing at the leader whose row absorbed their demand. Date is ISO (YYYY-MM-DD). No PII.",
       "source": {},
       "parameters": {
         "date": {
@@ -1569,7 +1569,7 @@
       "method": "GET",
       "category": "reception",
       "write": false,
-      "description": "Every practice location the caller can see. Use as the starting point when you don't know a location's exact name (path params on the other reception tools are exact matches, case-sensitive). Returns id + name only — for pool relationships (which locations share with which) use get_pool_topology; for multi-side splits use get_side_policy. No PII.",
+      "description": "Every practice location the caller can see. Use as the starting point when you don't know a location's exact name — path params on the other reception tools (`get_reception_load`, `get_side_policy`, `get_roster_day`) are exact matches, case-sensitive. Returns id + name only; for pool relationships (which locations share with which) use `get_pool_topology`, for multi-side splits use `get_side_policy`, for staffing on a specific date use `get_roster_day`. No PII.",
       "source": {},
       "parameters": {},
       "returns": {
@@ -1588,7 +1588,7 @@
       "method": "GET",
       "category": "reception",
       "write": false,
-      "description": "Configured pool mode for every location, static (not date-dependent). Mode is 'own' (self-pooling location like Crace, Lyneham) or 'shared' (feeds its check-outs into another leader — sharedFromLocation points at the target, e.g. Crace4Kids → Crace). Use this to answer 'is X normally pooled with Y' or to interpret sharingTarget/sharedFrom fields in get_reception_load's response. No PII.",
+      "description": "Configured pool mode for every location, as stored in the reception-departments table. Static, not date-dependent. Mode is `own` (self-pooling location like Crace, Lyneham) or `shared` (this location's reception minutes are absorbed by another leader — `sharedFromLocation` points at the target).\n\nThis reflects ONLY the DB-configured reception-department pooling mechanism — the one that drives get_reception_load's `sharingTarget` / `sharedFrom` fields. It does NOT capture: (a) informal pooling where receptionists physically walk between locations without a config row, (b) BP-side appointment-type routing that lands check-ins at a different desk, (c) same-manager coverage arrangements. If get_reception_load shows a location with appointment demand but zero rostered staff AND get_pool_topology says `own`, that's either a genuine staffing gap or informal-only pooling — do NOT assume it's covered; call it out or cross-check with get_roster_day. No PII.",
       "source": {},
       "parameters": {},
       "returns": {
@@ -1608,7 +1608,7 @@
       "method": "GET",
       "category": "reception",
       "write": false,
-      "description": "How a location is split into sides (e.g. Crace → Rec 1 / Rec 2) and how doctors + reception departments are attributed to each side. Combines three underlying configs in one call: sides (partKey + displayName + check-in share %), doctor-side mappings (which doctor's check-outs land on which side), and department-side mappings (which BP reception departments feed which side). Empty sides list = no split configured, single-pool math applies. Static config, not date-dependent. No PII.",
+      "description": "How a location is split into sides (e.g. Crace → Rec 1 / Rec 2) and how doctors + reception departments are attributed to each side. Combines three underlying configs in one call:\n\n- `sides`: partKey + displayName + check-in share % (each side is an independent pool for load-math purposes).\n- `doctorSides`: doctor→side mapping — a doctor's appointment check-outs are attributed to their configured side.\n- `departmentSides`: BP reception-department→side mapping — the dept a receptionist is rostered against determines which side their minutes belong to.\n\nEmpty `sides` list ⇒ location has no split configured, single-pool math applies (get_reception_load will emit one row per hour with partKey=null). Static config, not date-dependent — the sides / mappings don't change between days. Doctor names in `doctorSides.doctorDisplayName` are cached snapshots at mapping-write time; the authoritative name lives in BP. No PII.",
       "source": {},
       "parameters": {
         "location": {
@@ -1637,6 +1637,88 @@
         "data.doctorSides.partKey": { "type": "string", "pii": false },
         "data.departmentSides.deptId": { "type": "string", "pii": false },
         "data.departmentSides.partKey": { "type": "string", "pii": false }
+      }
+    },
+    {
+      "tool_name": "get_roster_day",
+      "path": "/api/mcp/v1/roster/{date}/{location}",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "Every shift rostered at a location on a specific date, from Tanda. Includes reception AND clinical staff — the filter is location + date, not role, so departmentName tells you what each shift is for. Each shift returns user id + name, department, start / finish times (ISO strings) + human-readable formatted times, hours scheduled, and acceptance status (`approved` / `pending`).\n\nUse this to answer questions the reception-load calc can't reach on its own — e.g. 'is Crace4Kids covered by anyone physically today?' when `get_pool_topology` says no formal pooling exists (informal pooling shows up as roster overlap here, not config rows), or 'who could I move from Rec 1 to Rec 2 without breaking coverage?'. Also useful for verifying that a `closed`-status row in get_reception_load really does have zero staff (vs a config issue).\n\nEmpty response ⇒ no one rostered on that date at that location. Date is ISO (YYYY-MM-DD). Staff names ARE surfaced (not redacted — same policy as `list_practitioners_today`).",
+      "source": {},
+      "parameters": {
+        "date": {
+          "type": "string",
+          "required": true,
+          "in": "path",
+          "format": "date"
+        },
+        "location": {
+          "type": "string",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.scheduleId": { "type": "integer", "pii": false, "format": "int32" },
+        "data.userId": { "type": "integer", "pii": false, "format": "int32" },
+        "data.userName": { "type": "string", "pii": false },
+        "data.departmentId": { "type": "integer", "pii": false, "format": "int32" },
+        "data.departmentName": { "type": "string", "pii": false },
+        "data.location": { "type": "string", "pii": false },
+        "data.startTime": { "type": "string", "pii": false, "format": "date-time" },
+        "data.finishTime": { "type": "string", "pii": false, "format": "date-time" },
+        "data.startTimeFormatted": { "type": "string", "pii": false },
+        "data.finishTimeFormatted": { "type": "string", "pii": false },
+        "data.hoursScheduled": { "type": "number", "pii": false, "format": "double" },
+        "data.acceptanceStatus": { "type": "string", "pii": false }
+      }
+    },
+    {
+      "tool_name": "get_settings",
+      "path": "/api/mcp/v1/settings",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "The load-model constants and appointment-type group percentages that drive the reception-load calc. Practice-wide singleton, not date-dependent. Use this to explain WHY a load% is what it is — without these Claude has to hand-wave the arithmetic.\n\nKey fields grouped by purpose:\n\n- Overhead & timing: `overheadMinutesPerHourPerReceptionist` (fixed admin time per rostered hour, subtracted from available), `callDurationMinutes` (minutes per expected call), `appointmentCheckInPaddingMinutes` / `appointmentCheckOutPaddingMinutes` (how many minutes before/after an appt is 'reception minutes').\n- Break policy: `defaultBreakMinutesPerLongShift` + `longShiftHoursThreshold` (fallback when Tanda supplies no break data — only kicks in for shifts >= threshold hours AND when `breakSchedule` below is empty), `breakSchedule` (percentage-based break points; when non-empty this OVERRIDES the fallback pair, which becomes dead config).\n- Appointment-type groups: `mode` (`by_type` / `blended`), four groups × three fields each (`groupNPercentOfAppts`, `groupNCheckInMin`, `groupNCheckOutMin`) and the computed `averageMinutesPerAppointment` blend.\n- Provenance: `updatedBy` + `updatedAtUtc` — when config last changed.\n\nNo PII.",
+      "source": {},
+      "parameters": {},
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.mode": { "type": "string", "pii": false },
+        "data.group1PercentOfAppts": { "type": "number", "pii": false, "format": "double" },
+        "data.group2PercentOfAppts": { "type": "number", "pii": false, "format": "double" },
+        "data.group3PercentOfAppts": { "type": "number", "pii": false, "format": "double" },
+        "data.group4PercentOfAppts": { "type": "number", "pii": false, "format": "double" },
+        "data.group1CheckInMin": { "type": "number", "pii": false, "format": "double" },
+        "data.group1CheckOutMin": { "type": "number", "pii": false, "format": "double" },
+        "data.group2CheckInMin": { "type": "number", "pii": false, "format": "double" },
+        "data.group2CheckOutMin": { "type": "number", "pii": false, "format": "double" },
+        "data.group3CheckInMin": { "type": "number", "pii": false, "format": "double" },
+        "data.group3CheckOutMin": { "type": "number", "pii": false, "format": "double" },
+        "data.group4CheckInMin": { "type": "number", "pii": false, "format": "double" },
+        "data.group4CheckOutMin": { "type": "number", "pii": false, "format": "double" },
+        "data.averageMinutesPerAppointment": { "type": "number", "pii": false, "format": "double" },
+        "data.overheadMinutesPerHourPerReceptionist": { "type": "number", "pii": false, "format": "double" },
+        "data.callDurationMinutes": { "type": "number", "pii": false, "format": "double" },
+        "data.defaultBreakMinutesPerLongShift": { "type": "number", "pii": false, "format": "double" },
+        "data.longShiftHoursThreshold": { "type": "number", "pii": false, "format": "double" },
+        "data.breakSchedule.atShiftPercent": { "type": "number", "pii": false, "format": "double" },
+        "data.breakSchedule.durationMinutes": { "type": "integer", "pii": false, "format": "int32" },
+        "data.appointmentCheckInPaddingMinutes": { "type": "integer", "pii": false, "format": "int32" },
+        "data.appointmentCheckOutPaddingMinutes": { "type": "integer", "pii": false, "format": "int32" },
+        "data.updatedBy": { "type": "string", "pii": false },
+        "data.updatedAtUtc": { "type": "string", "pii": false, "format": "date-time" }
       }
     }
   ]
