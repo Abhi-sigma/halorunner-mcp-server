@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json && npm run copy-config",
-    "copy-config": "node -e \"require('fs').mkdirSync('dist/config',{recursive:true});require('fs').copyFileSync('src/config/tools.json','dist/config/tools.json')\"",
+    "copy-config": "node -e \"const fs=require('fs');fs.mkdirSync('dist/config',{recursive:true});fs.copyFileSync('src/config/tools.json','dist/config/tools.json');fs.copyFileSync('src/config/reception-primer.md','dist/config/reception-primer.md')\"",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "generate:tools": "tsx scripts/generate-tools-from-swagger.ts",

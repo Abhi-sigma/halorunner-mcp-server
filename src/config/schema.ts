@@ -91,3 +91,31 @@ export async function loadToolsConfig(path = defaultConfigPath()): Promise<Tools
 
   return result.data;
 }
+
+// -- Server instructions ----------------------------------------------------
+
+function defaultInstructionsPath(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return resolve(here, "./reception-primer.md");
+}
+
+/**
+ * Load the reception-primer markdown that gets handed to each MCP session
+ * as the server's `instructions` string. Every MCP client reads this on
+ * `initialize` and injects it as system-context for the model — one-shot
+ * domain briefing per session, no user-side pasting.
+ *
+ * Missing / unreadable file is not fatal: return null and the server
+ * starts without a primer (clients see empty instructions). Loud log so
+ * the deploy check catches an accidental exclusion, but the tools still
+ * work without the briefing.
+ */
+export async function loadInstructions(path = defaultInstructionsPath()): Promise<string | null> {
+  try {
+    const raw = await readFile(path, "utf8");
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch {
+    return null;
+  }
+}

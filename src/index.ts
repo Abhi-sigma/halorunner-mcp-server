@@ -7,7 +7,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 
 import { env } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
-import { loadToolsConfig } from "./config/schema.js";
+import { loadToolsConfig, loadInstructions } from "./config/schema.js";
 import { buildRedactionPlans } from "./middleware/redact.js";
 import { verifyCognitoToken } from "./auth/jwtVerify.js";
 import { oauthRouter } from "./auth/oauth.js";
@@ -29,13 +29,20 @@ async function main() {
   const e = env();
   const config = await loadToolsConfig();
   const plans = buildRedactionPlans(config);
+  // Reception-domain primer handed to every MCP session's `initialize`
+  // response. Read once at boot; if the file is missing the server still
+  // starts (clients just see no primer). See docs/architecture.md for the
+  // rationale — primer collapses discovery rounds by giving the model the
+  // pool / side / attribution mental model up front.
+  const instructions = await loadInstructions();
 
   logger.info(
     {
       tools: config.tools.length,
       categories: Object.keys(config.categories).length,
       piiFields: Array.from(plans.values()).reduce((sum, p) => sum + p.piiPaths.size, 0),
-      apiBaseUrl: e.API_BASE_URL
+      apiBaseUrl: e.API_BASE_URL,
+      instructionsChars: instructions?.length ?? 0,
     },
     "gp-mcp-server starting"
   );
@@ -94,7 +101,10 @@ async function main() {
   const sessions = new Map<string, Session>();
 
   async function createSession(userToken: string): Promise<Session> {
-    const server = new McpServer({ name: "gp-mcp-server", version: "0.1.0" });
+    const server = new McpServer(
+      { name: "gp-mcp-server", version: "0.1.0" },
+      instructions ? { instructions } : undefined,
+    );
 
     const sessionBox = { userToken };
     installAllTools(server, config, plans, () => sessionBox);
