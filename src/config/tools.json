@@ -1720,6 +1720,52 @@
         "data.updatedBy": { "type": "string", "pii": false },
         "data.updatedAtUtc": { "type": "string", "pii": false, "format": "date-time" }
       }
+    },
+    {
+      "tool_name": "get_doctors_at",
+      "path": "/api/mcp/v1/doctors-at/{location}",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "Every doctor with BP session data at a location (or any of its sharer children). Pool-aware — querying a leader (e.g. `Crace`) returns doctors sessioned at both Crace and any locations that share into it (like Crace4Kids); querying a sharer returns just that sharer's own doctors. Deduped by `doctorUserId`; case-insensitive location match against BP's `BpDoctorSessions.LocationName`. Use this to answer 'which doctors work at X' or to cross-reference with `get_side_policy.doctorSides` (which uses `doctorUserId` as the join key). Empty response ⇒ no session data synced yet OR no doctors mapped to this location. Names come from BP, may vary slightly from `get_side_policy.doctorSides.doctorDisplayName` (which is a manager-typed snapshot). No PII.",
+      "source": {},
+      "parameters": {
+        "location": {
+          "type": "string",
+          "required": true,
+          "in": "path"
+        }
+      },
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.doctorUserId": { "type": "integer", "pii": false, "format": "int32" },
+        "data.doctorName": { "type": "string", "pii": false }
+      }
+    },
+    {
+      "tool_name": "get_appointment_type_catalog",
+      "path": "/api/mcp/v1/appointment-type-catalog",
+      "method": "GET",
+      "category": "reception",
+      "write": false,
+      "description": "Full BP appointment-type catalogue with each type's configured group (1..4) — or `null` when it's falling back to `defaultGroup`. Reception-load math depends on this: an appointment of a given BP code lands in a group, and each group's `groupNCheckInMin` + `groupNCheckOutMin` from `get_settings` determine how many reception minutes that appointment contributes. Use when interpreting an appointment mix (e.g. 'why does this hour need so many reception minutes — what appointment types are booked?'); combine with `get_settings` for the minute weights. Static config, not date-dependent. No PII.",
+      "source": {},
+      "parameters": {},
+      "returns": {
+        "success": { "type": "boolean", "pii": false },
+        "message": { "type": "string", "pii": false },
+        "errorCode": { "type": "string", "pii": false },
+        "timestamp": { "type": "string", "pii": false, "format": "date-time" },
+        "requestId": { "type": "string", "pii": false },
+        "data.bpAppointmentTypeCode": { "type": "string", "pii": false },
+        "data.typeName": { "type": "string", "pii": false },
+        "data.group": { "type": "integer", "pii": false, "format": "int32" },
+        "data.defaultGroup": { "type": "integer", "pii": false, "format": "int32" }
+      }
     }
   ]
 }
